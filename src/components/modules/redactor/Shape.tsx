@@ -1,6 +1,7 @@
-import { Dimension, Position, ShapeType } from "@/machines/redactor";
 import { type ComponentPropsWithoutRef, type FC } from "react";
 import { twMerge } from "tailwind-merge";
+
+import { Dimension, Position, ShapeType } from "@/types";
 
 export interface ShapeProps extends ComponentPropsWithoutRef<"div"> {
   dimension: Dimension;

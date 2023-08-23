@@ -13,6 +13,9 @@ export interface Typegen0 {
     services: never;
   };
   eventsCausingActions: {
+    areaSelectionEnd: "area-selection.end";
+    areaSelectionMove: "area-selection.move";
+    areaSelectionStart: "area-selection.start";
     createShape: "box.create";
     deleteSelected: "box.select.delete";
     selectShape: "box.select";
@@ -20,6 +23,6 @@ export interface Typegen0 {
   eventsCausingDelays: {};
   eventsCausingGuards: {};
   eventsCausingServices: {};
-  matchesStates: undefined;
+  matchesStates: "area-selection" | "initial";
   tags: never;
 }

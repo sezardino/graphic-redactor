@@ -1,47 +1,62 @@
+import {
+  CreateShapeDto,
+  Position,
+  SelectShapesDto,
+  SelectionDto,
+  ShapeEntity,
+} from "@/types";
 import { createActorContext } from "@xstate/react";
 import { assign, createMachine } from "xstate";
-
-export interface Position {
-  x: number;
-  y: number;
-}
-
-export interface Dimension {
-  width: number;
-  height: number;
-}
-
-export type ShapeType = "rect" | "circle";
-
-export type CreateShapeDto = Pick<ShapeEntity, "position"> & {
-  dimension?: Dimension;
-  type?: ShapeType;
-};
-
-export type SelectShapesDto = {
-  shape: string | string[];
-  more?: boolean;
-};
-
-export interface ShapeEntity {
-  id: string;
-  type: ShapeType;
-  position: Position;
-  dimension: Dimension;
-}
 
 type Context = {
   selectedShapes: string[];
   shapes: ShapeEntity[];
+  selection: {
+    start: Position;
+    end: Position;
+  } | null;
 };
 
 const redactorMachine = createMachine(
   {
     id: "redactor",
+    initial: "initial",
+    schema: {
+      events: {} as
+        | { type: "box.create"; data: CreateShapeDto }
+        | { type: "box.select"; data?: SelectShapesDto }
+        | { type: "box.select.delete" }
+        | { type: "area-selection.start"; data: SelectionDto }
+        | { type: "area-selection.move"; data: SelectionDto }
+        | { type: "area-selection.end" },
+    },
     context: {
       selectedShapes: [],
       shapes: [],
+      selection: null,
     } as Context,
+    states: {
+      initial: {
+        on: {
+          "area-selection.start": {
+            target: "area-selection",
+            actions: ["areaSelectionStart"],
+          },
+        },
+      },
+      "area-selection": {
+        on: {
+          "area-selection.end": {
+            target: "initial",
+            actions: ["areaSelectionEnd"],
+          },
+          "area-selection.move": {
+            actions: ["areaSelectionMove"],
+            internal: true,
+          },
+        },
+      },
+    },
     on: {
       "box.create": {
         internal: true,
@@ -56,12 +71,7 @@ const redactorMachine = createMachine(
         actions: ["deleteSelected"],
       },
     },
-    schema: {
-      events: {} as
-        | { type: "box.create"; data: CreateShapeDto }
-        | { type: "box.select"; data?: SelectShapesDto }
-        | { type: "box.select.delete" },
-    },
+
     predictableActionArguments: true,
     preserveActionOrder: true,
     tsTypes: {} as import("./redactor.typegen").Typegen0,
@@ -106,6 +116,31 @@ const redactorMachine = createMachine(
             (shape) => !context.selectedShapes.includes(shape.id)
           ),
           selectedShapes: [],
+        };
+      }),
+      areaSelectionStart: assign((_, event) => {
+        return {
+          selection: {
+            start: event.data.position,
+            end: event.data.position,
+          },
+        };
+      }),
+      areaSelectionMove: assign((context, event) => {
+        if (context.selection === null) return {};
+
+        return {
+          selection: {
+            ...context.selection,
+            end: event.data.position,
+          },
+        };
+      }),
+      areaSelectionEnd: assign((context) => {
+        if (context.selection === null) return {};
+
+        return {
+          selection: null,
         };
       }),
     },
