@@ -18,6 +18,11 @@ export type CreateShapeDto = Pick<ShapeEntity, "position"> & {
   type?: ShapeType;
 };
 
+export type SelectShapesDto = {
+  shape: string | string[];
+  more?: boolean;
+};
+
 export interface ShapeEntity {
   id: string;
   type: ShapeType;
@@ -26,6 +31,7 @@ export interface ShapeEntity {
 }
 
 type Context = {
+  selectedShapes: string[];
   shapes: ShapeEntity[];
 };
 
@@ -33,6 +39,7 @@ const redactorMachine = createMachine(
   {
     id: "redactor",
     context: {
+      selectedShapes: [],
       shapes: [],
     } as Context,
     on: {
@@ -40,14 +47,20 @@ const redactorMachine = createMachine(
         internal: true,
         actions: ["createShape"],
       },
-      "box.delete": {
+      "box.select": {
         internal: true,
+        actions: ["selectShape"],
+      },
+      "box.select.delete": {
+        internal: true,
+        actions: ["deleteSelected"],
       },
     },
     schema: {
       events: {} as
         | { type: "box.create"; data: CreateShapeDto }
-        | { type: "box.delete"; shapeId: string },
+        | { type: "box.select"; data?: SelectShapesDto }
+        | { type: "box.select.delete" },
     },
     predictableActionArguments: true,
     preserveActionOrder: true,
@@ -70,6 +83,29 @@ const redactorMachine = createMachine(
               width: dimension?.width ?? 100,
             },
           }),
+        };
+      }),
+      selectShape: assign((context, event) => {
+        if (event.data === undefined) {
+          return { selectedShapes: [] };
+        }
+
+        const { more = false, shape } = event.data;
+
+        if (more) {
+          return { selectedShapes: context.selectedShapes.concat(shape) };
+        }
+
+        return {
+          selectedShapes: Array.isArray(shape) ? shape : [shape],
+        };
+      }),
+      deleteSelected: assign((context) => {
+        return {
+          shapes: context.shapes.filter(
+            (shape) => !context.selectedShapes.includes(shape.id)
+          ),
+          selectedShapes: [],
         };
       }),
     },

@@ -14,6 +14,8 @@ export interface Typegen0 {
   };
   eventsCausingActions: {
     createShape: "box.create";
+    deleteSelected: "box.select.delete";
+    selectShape: "box.select";
   };
   eventsCausingDelays: {};
   eventsCausingGuards: {};

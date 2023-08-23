@@ -10,7 +10,8 @@ export interface ShapeProps extends ComponentPropsWithoutRef<"div"> {
 }
 
 export const Shape: FC<ShapeProps> = (props) => {
-  const { type, isSelected, dimension, position, className, ...rest } = props;
+  const { onClick, type, isSelected, dimension, position, className, ...rest } =
+    props;
 
   return (
     <div
@@ -21,7 +22,15 @@ export const Shape: FC<ShapeProps> = (props) => {
         width: `${dimension.width}px`,
         height: `${dimension.height}px`,
       }}
-      className={twMerge(`absolute bg-red-100`, className)}
-    ></div>
+      className={twMerge(
+        `absolute bg-red-100`,
+        isSelected && "bg-red-600",
+        className
+      )}
+      onClick={(evt) => {
+        evt.stopPropagation();
+        onClick?.(evt);
+      }}
+    />
   );
 };
