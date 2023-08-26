@@ -58,12 +58,31 @@ export const PlaygroundTemplate: FC<PlaygroundTemplateProps> = (props) => {
     send({ type: "area-selection.start", data: { position: { x, y } } });
   };
   const playgroundPointerMoveHandler = (evt: PointerEvent<HTMLDivElement>) => {
-    const { x, y } = getMousePosition(evt);
+    if (value.matches("area-selection")) {
+      const { x, y } = getMousePosition(evt);
 
-    send({ type: "area-selection.move", data: { position: { x, y } } });
+      send({ type: "area-selection.move", data: { position: { x, y } } });
+    }
+
+    if (value.matches("shape-move")) {
+      if (!playgroundRef.current) return;
+
+      const box = playgroundRef.current.getBoundingClientRect();
+
+      const x = evt.clientX - box.left;
+      const y = evt.clientY - box.top;
+
+      requestAnimationFrame(() => moveShapeHandler({ position: { x, y } }));
+    }
   };
   const playgroundPointerUpHandler = () => {
-    send({ type: "area-selection.end" });
+    if (value.matches("area-selection")) {
+      send({ type: "area-selection.end" });
+    }
+
+    if (value.matches("shape-move")) {
+      send("shape-move.end");
+    }
   };
 
   const shapePointerDownHandler = (
@@ -81,28 +100,12 @@ export const PlaygroundTemplate: FC<PlaygroundTemplateProps> = (props) => {
   const moveShapeHandler = (data: ShapeMoveMoveDto) =>
     send({ type: "shape-move.move", data });
 
-  const shapePointerMoveHandler = (evt: PointerEvent<HTMLDivElement>) => {
-    evt.stopPropagation();
-    if (!playgroundRef.current) return;
-
-    const box = playgroundRef.current.getBoundingClientRect();
-
-    const x = evt.clientX - box.left;
-    const y = evt.clientY - box.top;
-
-    requestAnimationFrame(() => moveShapeHandler({ position: { x, y } }));
-  };
-  const shapePointerUpHandler = (evt: PointerEvent<HTMLDivElement>) => {
-    evt.stopPropagation();
-    send("shape-move.end");
-  };
-
   return (
     <section
       {...rest}
       ref={playgroundRef}
       className={twMerge(
-        "w-screen h-screen bg-slate-400 bg-opacity-25 relative select-none",
+        "w-screen h-screen bg-slate-400 bg-opacity-25 relative select-none overflow-hidden",
         className
       )}
       onDoubleClick={dabbleClickHandler}
@@ -133,8 +136,6 @@ export const PlaygroundTemplate: FC<PlaygroundTemplateProps> = (props) => {
             });
           }}
           onPointerDown={(evt) => shapePointerDownHandler(evt, shape)}
-          onPointerMove={shapePointerMoveHandler}
-          onPointerUp={shapePointerUpHandler}
         />
       ))}
       {value.matches("area-selection") && value.context.selection?.end && (
