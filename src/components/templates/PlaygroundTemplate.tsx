@@ -80,12 +80,13 @@ export const PlaygroundTemplate: FC<PlaygroundTemplateProps> = (props) => {
             position={shape.position}
             type={shape.type}
             isSelected={value.context.selectedShapes.includes(shape.id)}
-            onClick={(evt) =>
+            onClick={(evt) => {
+              evt.stopPropagation();
               send({
                 type: "box.select",
                 data: { shape: shape.id, more: evt.shiftKey },
-              })
-            }
+              });
+            }}
           />
         ))}
         {value.matches("area-selection") && value.context.selection && (

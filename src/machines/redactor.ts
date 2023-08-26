@@ -129,11 +129,43 @@ const redactorMachine = createMachine(
       areaSelectionMove: assign((context, event) => {
         if (context.selection === null) return {};
 
+        const shapesInSelection = context.shapes.filter((shape) => {
+          if (!context.selection) return false;
+
+          const { start, end } = context.selection;
+
+          const [xSStart, xSEnd] = [
+            Math.min(start.x, end.x),
+            Math.max(start.x, end.x),
+          ];
+          const [ySStart, ySEnd] = [
+            Math.min(start.y, end.y),
+            Math.max(start.y, end.y),
+          ];
+
+          const [xStart, xEnd] = [
+            shape.position.x,
+            shape.position.x + shape.dimension.width,
+          ];
+          const [yStart, yEnd] = [
+            shape.position.y,
+            shape.position.y + shape.dimension.height,
+          ];
+
+          return (
+            yEnd >= ySStart &&
+            yStart <= ySEnd &&
+            xEnd >= xSStart &&
+            xStart <= xSEnd
+          );
+        });
+
         return {
           selection: {
             ...context.selection,
             end: event.data.position,
           },
+          selectedShapes: shapesInSelection.map((shape) => shape.id),
         };
       }),
       areaSelectionEnd: assign((context) => {

@@ -10,7 +10,7 @@ export const Playground: FC<PlaygroundProps> = (props) => {
     <div
       {...rest}
       className={twMerge(
-        "w-[75vw] h-[75vh] bg-slate-400 bg-opacity-25 relative",
+        "w-[75vw] h-[75vh] bg-slate-400 bg-opacity-25 relative select-none",
         className
       )}
     >
