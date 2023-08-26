@@ -67,7 +67,6 @@ export const PlaygroundTemplate: FC<PlaygroundTemplateProps> = (props) => {
   return (
     <section {...rest} className={twMerge("", className)}>
       <Playground
-        onClick={() => send({ type: "box.select" })}
         onDoubleClick={dabbleClickHandler}
         onPointerDown={pointerDownHandler}
         onPointerMove={pointerMoveHandler}
@@ -80,6 +79,7 @@ export const PlaygroundTemplate: FC<PlaygroundTemplateProps> = (props) => {
             position={shape.position}
             type={shape.type}
             isSelected={value.context.selectedShapes.includes(shape.id)}
+            onPointerDown={(evt) => evt.stopPropagation()}
             onClick={(evt) => {
               evt.stopPropagation();
               send({
@@ -89,7 +89,7 @@ export const PlaygroundTemplate: FC<PlaygroundTemplateProps> = (props) => {
             }}
           />
         ))}
-        {value.matches("area-selection") && value.context.selection && (
+        {value.matches("area-selection") && value.context.selection?.end && (
           <Selection
             start={value.context.selection.start}
             end={value.context.selection.end}
