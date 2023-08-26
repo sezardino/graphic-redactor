@@ -137,13 +137,13 @@ const redactorMachine = createMachine(
         const { more = false, shape } = event.data;
 
         if (more) {
-          return { selectedShapes: context.selectedShapes.concat(shape) };
-        }
+          if (!Array.isArray(shape) && context.selectedShapes.includes(shape)) {
+            return {
+              selectedShapes: context.selectedShapes.filter((s) => s !== shape),
+            };
+          }
 
-        if (!Array.isArray(shape) && context.selectedShapes.includes(shape)) {
-          return {
-            selectedShapes: context.selectedShapes.filter((s) => s !== shape),
-          };
+          return { selectedShapes: context.selectedShapes.concat(shape) };
         }
 
         return {

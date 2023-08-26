@@ -47,6 +47,8 @@ export const PlaygroundTemplate: FC<PlaygroundTemplateProps> = (props) => {
   }, [send]);
 
   const dabbleClickHandler = (evt: MouseEvent<HTMLDivElement>) => {
+    if (evt.shiftKey) return;
+
     const { x, y } = getMousePosition(evt);
 
     send({ type: "box.create", data: { position: { x, y } } });
@@ -54,6 +56,8 @@ export const PlaygroundTemplate: FC<PlaygroundTemplateProps> = (props) => {
 
   const playgroundPointerDownHandler = (evt: PointerEvent<HTMLDivElement>) => {
     const { x, y } = getMousePosition(evt);
+
+    send({ type: "box.select" });
 
     send({ type: "area-selection.start", data: { position: { x, y } } });
   };
@@ -93,6 +97,11 @@ export const PlaygroundTemplate: FC<PlaygroundTemplateProps> = (props) => {
     const { x, y } = getMousePosition(evt);
 
     send({
+      type: "box.select",
+      data: { shape: shape.id, more: evt.shiftKey },
+    });
+
+    send({
       type: "shape-move.start",
       data: { shape: shape.id, shift: { x, y } },
     });
@@ -128,13 +137,6 @@ export const PlaygroundTemplate: FC<PlaygroundTemplateProps> = (props) => {
           position={shape.position}
           type={shape.type}
           isSelected={value.context.selectedShapes.includes(shape.id)}
-          onClick={(evt) => {
-            evt.stopPropagation();
-            send({
-              type: "box.select",
-              data: { shape: shape.id, more: evt.shiftKey },
-            });
-          }}
           onPointerDown={(evt) => shapePointerDownHandler(evt, shape)}
         />
       ))}
