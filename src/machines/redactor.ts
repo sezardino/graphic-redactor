@@ -4,6 +4,9 @@ import {
   SelectShapesDto,
   SelectionDto,
   ShapeEntity,
+  ShapeMoveMoveDto,
+  ShapeMoveStartDto,
+  Shift,
 } from "@/types";
 import { createActorContext } from "@xstate/react";
 import { assign, createMachine } from "xstate";
@@ -11,14 +14,19 @@ import { assign, createMachine } from "xstate";
 type Context = {
   selectedShapes: string[];
   shapes: ShapeEntity[];
+  shapeMove: {
+    shapeId: string;
+    shift: Shift;
+  } | null;
   selection: {
     start: Position;
-    end: Position;
+    end: Position | null;
   } | null;
 };
 
 const redactorMachine = createMachine(
   {
+    /** @xstate-layout N4IgpgJg5mDOIC5QCdIEMDGAXA9sgxAEY4AeAdBqmlmANoAMAuoqAA46wCWWnOAdixAlEAJgDMANjJiR9GQFYALAHY5ADjEBONQBoQAT1H1FZTfQkj5yxccVr6ARjEBfZ3tQRMuAsXKwwADZg2AzMSCDsXDz8gsII4spkDsqaEpraig5qVhLyeoYIDvRqZIryYg4OmoppWpoOru7o2HhEpGT+QdhkEIFgNKGCkdy8AuFxIlVk9OKKKmKZDjZO+YgOIo0gHl54ZJx8I2gB+GhUALSdwdF8HVinWIPhw9exa7lJjvISYsWaYvKWZSrBASd6TNTWeiqBbyBpuLbNbx7A48I74WAACzQrDAZwAtjgAG5gW73R5sDgjGLjN7yD4OL4-NR-AFWYEqETSdZ2SyTZRifmbbYtZBkU5gNAXPrYUYnc6XGX8MgE4nkiKUl40hCSRIiVIQ+jFeSGsRiYHyZlkayTCRlFKSeSaIWI3biyUK65yiVSrrXMhgPgQNXPUavQrKTkiXLfDSVewOc0SErKaPrQ3rIpO+HCpGY7G4lVgdFYnH4okkgNBphDDWhrVZKSOgViDS2lPJXQGRACunZP7fVLWKzWZ2eEUdEsF8vF-Nl4nK8vB2vU0BxHVkPVJtTZY1J1nArRSDSO3mwzTGrPwvg4XrwcI5vA1qJ11eIM4JrvxbfSJsSFOZdQXGzF1RX2Q4AifKkxlfBAVGBP86SWAFNAjFDxAkUcdlFN0fSuF91WfFchG7eoN0UdJtGUDtHWyeDSKqZCZDUBwJHoR1MPHPNS0LSDNRgrQHDIiiIWo7Q8k-ciShEZk2K0JQqjhVwgA */
     id: "redactor",
     initial: "initial",
     schema: {
@@ -28,12 +36,16 @@ const redactorMachine = createMachine(
         | { type: "box.select.delete" }
         | { type: "area-selection.start"; data: SelectionDto }
         | { type: "area-selection.move"; data: SelectionDto }
-        | { type: "area-selection.end" },
+        | { type: "area-selection.end" }
+        | { type: "shape-move.start"; data: ShapeMoveStartDto }
+        | { type: "shape-move.move"; data: ShapeMoveMoveDto }
+        | { type: "shape-move.end" },
     },
     context: {
       selectedShapes: [],
       shapes: [],
       selection: null,
+      shapeMove: null,
     } as Context,
     states: {
       initial: {
@@ -42,17 +54,38 @@ const redactorMachine = createMachine(
             target: "area-selection",
             actions: ["areaSelectionStart"],
           },
+
+          "shape-move.start": {
+            target: "shape-move",
+            actions: "shapeMoveStart",
+          },
         },
       },
+
       "area-selection": {
         on: {
+          "area-selection.move": {
+            actions: ["areaSelectionMove"],
+            internal: true,
+          },
           "area-selection.end": {
             target: "initial",
             actions: ["areaSelectionEnd"],
           },
-          "area-selection.move": {
-            actions: ["areaSelectionMove"],
+        },
+      },
+
+      "shape-move": {
+        on: {
+          "shape-move.end": {
+            target: "initial",
+            actions: "shapeMoveEnd",
+          },
+
+          "shape-move.move": {
+            target: "shape-move",
             internal: true,
+            actions: "shapeMoveMove",
           },
         },
       },
@@ -84,6 +117,7 @@ const redactorMachine = createMachine(
         } = event;
 
         return {
+          selectedShapes: [],
           shapes: context.shapes.concat({
             id: crypto.randomUUID(),
             type: type ?? "rect",
@@ -106,6 +140,12 @@ const redactorMachine = createMachine(
           return { selectedShapes: context.selectedShapes.concat(shape) };
         }
 
+        if (!Array.isArray(shape) && context.selectedShapes.includes(shape)) {
+          return {
+            selectedShapes: context.selectedShapes.filter((s) => s !== shape),
+          };
+        }
+
         return {
           selectedShapes: Array.isArray(shape) ? shape : [shape],
         };
@@ -122,7 +162,7 @@ const redactorMachine = createMachine(
         return {
           selection: {
             start: event.data.position,
-            end: event.data.position,
+            end: null,
           },
         };
       }),
@@ -131,6 +171,7 @@ const redactorMachine = createMachine(
 
         const shapesInSelection = context.shapes.filter((shape) => {
           if (!context.selection) return false;
+          if (!context.selection.end) return false;
 
           const { start, end } = context.selection;
 
@@ -171,10 +212,32 @@ const redactorMachine = createMachine(
       areaSelectionEnd: assign((context) => {
         if (context.selection === null) return {};
 
+        return { selection: null };
+      }),
+      shapeMoveStart: assign((_, event) => ({
+        shapeMove: {
+          shapeId: event.data.shape,
+          shift: event.data.shift,
+        },
+      })),
+      shapeMoveMove: assign((context, event) => {
+        if (!context.shapeMove) return {};
+        const newShapes = context.shapes.map((s) => {
+          if (s.id !== context.shapeMove?.shapeId) return s;
+
+          const newPosition = {
+            x: event.data.position.x - context.shapeMove.shift.x,
+            y: event.data.position.y - context.shapeMove.shift.y,
+          };
+
+          return { ...s, position: newPosition };
+        });
+
         return {
-          selection: null,
+          shapes: newShapes,
         };
       }),
+      shapeMoveEnd: assign(() => ({ shapeMove: null })),
     },
     services: {},
     guards: {},

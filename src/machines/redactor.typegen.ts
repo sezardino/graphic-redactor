@@ -19,10 +19,13 @@ export interface Typegen0 {
     createShape: "box.create";
     deleteSelected: "box.select.delete";
     selectShape: "box.select";
+    shapeMoveEnd: "shape-move.end";
+    shapeMoveMove: "shape-move.move";
+    shapeMoveStart: "shape-move.start";
   };
   eventsCausingDelays: {};
   eventsCausingGuards: {};
   eventsCausingServices: {};
-  matchesStates: "area-selection" | "initial";
+  matchesStates: "area-selection" | "initial" | "shape-move";
   tags: never;
 }

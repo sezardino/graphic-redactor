@@ -30,3 +30,17 @@ export interface Dimension {
   width: number;
   height: number;
 }
+
+export interface Shift {
+  x: number;
+  y: number;
+}
+
+export interface ShapeMoveStartDto {
+  shape: string;
+  shift: Shift;
+}
+
+export interface ShapeMoveMoveDto {
+  position: Position;
+}
