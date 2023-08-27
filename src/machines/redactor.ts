@@ -4,9 +4,7 @@ import {
   SelectShapesDto,
   SelectionDto,
   ShapeEntity,
-  ShapeMoveMoveDto,
   ShapeMoveStartDto,
-  Shift,
 } from "@/types";
 import { createActorContext } from "@xstate/react";
 import { assign, createMachine } from "xstate";
@@ -15,8 +13,7 @@ type Context = {
   selectedShapes: string[];
   shapes: ShapeEntity[];
   shapeMove: {
-    shapeId: string;
-    shift: Shift;
+    prevPosition: Position;
   } | null;
   selection: {
     start: Position;
@@ -38,7 +35,7 @@ const redactorMachine = createMachine(
         | { type: "area-selection.move"; data: SelectionDto }
         | { type: "area-selection.end" }
         | { type: "shape-move.start"; data: ShapeMoveStartDto }
-        | { type: "shape-move.move"; data: ShapeMoveMoveDto }
+        | { type: "shape-move.move"; data: Position }
         | { type: "shape-move.end" },
     },
     context: {
@@ -216,25 +213,33 @@ const redactorMachine = createMachine(
       }),
       shapeMoveStart: assign((_, event) => ({
         shapeMove: {
-          shapeId: event.data.shape,
-          shift: event.data.shift,
+          prevPosition: event.data.position,
         },
       })),
       shapeMoveMove: assign((context, event) => {
         if (!context.shapeMove) return {};
+
+        const shiftX = context.shapeMove.prevPosition.x - event.data.x;
+        const shiftY = context.shapeMove.prevPosition.y - event.data.y;
+
         const newShapes = context.shapes.map((s) => {
-          if (s.id !== context.shapeMove?.shapeId) return s;
+          if (!context.selectedShapes.includes(s.id)) return s;
 
-          const newPosition = {
-            x: event.data.position.x - context.shapeMove.shift.x,
-            y: event.data.position.y - context.shapeMove.shift.y,
+          return {
+            ...s,
+            position: {
+              x: s.position.x - shiftX,
+              y: s.position.y - shiftY,
+            },
           };
-
-          return { ...s, position: newPosition };
         });
 
         return {
           shapes: newShapes,
+          shapeMove: {
+            ...context.shapeMove,
+            prevPosition: { x: event.data.x, y: event.data.y },
+          },
         };
       }),
       shapeMoveEnd: assign(() => ({ shapeMove: null })),

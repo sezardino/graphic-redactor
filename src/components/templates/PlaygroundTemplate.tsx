@@ -10,7 +10,7 @@ import { twMerge } from "tailwind-merge";
 
 import { RedactorContext } from "@/machines/redactor";
 
-import { ShapeEntity, ShapeMoveMoveDto } from "@/types";
+import { Position, ShapeEntity } from "@/types";
 import { Selection } from "../modules/redactor/Selection";
 import { Shape } from "../modules/redactor/Shape";
 
@@ -76,7 +76,7 @@ export const PlaygroundTemplate: FC<PlaygroundTemplateProps> = (props) => {
       const x = evt.clientX - box.left;
       const y = evt.clientY - box.top;
 
-      requestAnimationFrame(() => moveShapeHandler({ position: { x, y } }));
+      requestAnimationFrame(() => moveShapeHandler({ x, y }));
     }
   };
   const playgroundPointerUpHandler = () => {
@@ -94,19 +94,26 @@ export const PlaygroundTemplate: FC<PlaygroundTemplateProps> = (props) => {
     shape: ShapeEntity
   ) => {
     evt.stopPropagation();
-    const { x, y } = getMousePosition(evt);
 
     send({
       type: "box.select",
       data: { shape: shape.id, more: evt.shiftKey },
     });
 
+    if (!playgroundRef.current) return;
+
+    const box = playgroundRef.current.getBoundingClientRect();
+
+    const x = evt.clientX - box.left;
+    const y = evt.clientY - box.top;
+
     send({
       type: "shape-move.start",
-      data: { shape: shape.id, shift: { x, y } },
+      data: { position: { x, y } },
     });
   };
-  const moveShapeHandler = (data: ShapeMoveMoveDto) =>
+
+  const moveShapeHandler = (data: Position) =>
     send({ type: "shape-move.move", data });
 
   return (
@@ -127,7 +134,7 @@ export const PlaygroundTemplate: FC<PlaygroundTemplateProps> = (props) => {
           "empty:hidden p-5 h-10 absolute top-5 left-1/2 -translate-x-1/2 bg-slate-500 rounded-sm flex items-center justify-center"
         )}
       >
-        {JSON.stringify(value.context.shapeMove?.shift)}
+        {JSON.stringify(value.context.shapeMove?.prevPosition)}
       </div>
 
       {value.context.shapes.map((shape) => (

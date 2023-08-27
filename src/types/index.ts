@@ -37,8 +37,7 @@ export interface Shift {
 }
 
 export interface ShapeMoveStartDto {
-  shape: string;
-  shift: Shift;
+  position: Position;
 }
 
 export interface ShapeMoveMoveDto {
